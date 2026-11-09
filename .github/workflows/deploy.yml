@@ -3,6 +3,7 @@ name: Deploy to FastAPI Cloud
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -10,9 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v5
         with:
-          version: "latest"
           enable-cache: true
       - name: Lint with Ruff
         run: uv run ruff check .
