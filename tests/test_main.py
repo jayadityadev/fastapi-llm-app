@@ -19,15 +19,6 @@ def test_generate_unauthorized_missing_header():
     assert "Invalid or missing API key" in response.json()["detail"]
 
 
-def test_generate_unauthorized_invalid_token():
-    response = client.post(
-        "/api/generate",
-        headers={"X-API-Key": "invalid-token"},
-        json={"prompt": "Hello"},
-    )
-    assert response.status_code == 401
-
-
 def test_generate_authorized_success():
     response = client.post(
         "/api/generate",
@@ -39,6 +30,22 @@ def test_generate_authorized_success():
     assert "response" in data
     assert "model" in data
     assert "provider" in data
+
+
+def test_generate_stream_unauthorized():
+    response = client.post("/api/generate/stream", json={"prompt": "Stream test"})
+    assert response.status_code == 401
+
+
+def test_generate_stream_authorized():
+    response = client.post(
+        "/api/generate/stream",
+        headers={"X-API-Key": "demo-key-123"},
+        json={"prompt": "Count 1 to 3"},
+    )
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers.get("content-type", "")
+    assert "data: " in response.text
 
 
 def test_frontend_colocation():

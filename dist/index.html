@@ -6,22 +6,23 @@
   <title>FastAPI LLM App · FastAPI Cloud</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Markdown parser and sanitizer -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
   <style>
     :root {
-      --bg: #0a0c10;
-      --card-bg: #12161f;
-      --card-border: #1e2638;
+      --bg: #090c10;
+      --card-bg: #111622;
+      --card-border: #1d263b;
       --accent: #009688;
       --accent-hover: #00796b;
       --text-main: #f0f4fc;
       --text-muted: #8b9bb4;
-      --bubble-user: #1a2234;
-      --bubble-bot: #151b27;
-      --code-bg: #0d1117;
+      --bubble-user: #172133;
+      --bubble-bot: #101520;
+      --code-bg: #0b0f17;
+      --code-header-bg: #151c2a;
       --success: #10b981;
       --error: #ef4444;
     }
@@ -39,10 +40,10 @@
     }
 
     header {
-      background: rgba(18, 22, 31, 0.85);
+      background: rgba(17, 22, 34, 0.85);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--card-border);
-      padding: 14px 24px;
+      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -58,7 +59,7 @@
       background: linear-gradient(135deg, #009688, #059669);
       color: white;
       font-weight: 700;
-      font-size: 15px;
+      font-size: 14px;
       padding: 6px 12px;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 150, 136, 0.25);
@@ -86,7 +87,7 @@
       align-items: center;
       gap: 6px;
       font-size: 12px;
-      background: #0f1c18;
+      background: #0d1e1a;
       border: 1px solid #134e3f;
       color: #34d399;
       padding: 4px 10px;
@@ -131,17 +132,17 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
       outline: none;
-      width: 130px;
+      width: 125px;
     }
 
     main {
       flex: 1;
       display: flex;
       flex-direction: column;
-      max-width: 900px;
+      max-width: 920px;
       width: 100%;
       margin: 0 auto;
-      padding: 20px 20px 10px;
+      padding: 16px 20px 10px;
       overflow: hidden;
     }
 
@@ -165,12 +166,12 @@
     .message {
       display: flex;
       flex-direction: column;
-      max-width: 88%;
-      animation: fadeIn 0.25s ease-out;
+      max-width: 90%;
+      animation: fadeIn 0.2s ease-out;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
@@ -186,8 +187,8 @@
     .bubble {
       padding: 14px 18px;
       border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.6;
+      font-size: 14.5px;
+      line-height: 1.65;
       word-break: break-word;
     }
 
@@ -203,9 +204,10 @@
       border: 1px solid var(--card-border);
       color: #f1f5f9;
       border-bottom-left-radius: 3px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     }
 
-    /* Formatted Markdown Rendering Styles inside Bot Bubble */
+    /* Polished Markdown Typography */
     .bubble p {
       margin-bottom: 12px;
     }
@@ -214,85 +216,121 @@
     }
 
     .bubble h1, .bubble h2, .bubble h3, .bubble h4 {
-      margin-top: 16px;
-      margin-bottom: 8px;
+      margin-top: 18px;
+      margin-bottom: 10px;
       font-weight: 700;
       color: #ffffff;
       line-height: 1.3;
     }
-    .bubble h1 { font-size: 1.35em; border-bottom: 1px solid var(--card-border); padding-bottom: 4px; }
-    .bubble h2 { font-size: 1.2em; border-bottom: 1px solid var(--card-border); padding-bottom: 4px; }
-    .bubble h3 { font-size: 1.05em; }
+    .bubble h1 { font-size: 1.4em; border-bottom: 1px solid var(--card-border); padding-bottom: 6px; }
+    .bubble h2 { font-size: 1.25em; border-bottom: 1px solid var(--card-border); padding-bottom: 4px; }
+    .bubble h3 { font-size: 1.1em; color: #38bdf8; }
 
     .bubble ul, .bubble ol {
-      margin: 8px 0 12px 22px;
+      margin: 8px 0 14px 22px;
     }
     .bubble li {
-      margin-bottom: 4px;
+      margin-bottom: 5px;
+    }
+
+    /* Enhanced Code Blocks with Header & Copy */
+    .code-container {
+      margin: 14px 0;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+      background: var(--code-bg);
+    }
+
+    .code-header {
+      background: var(--code-header-bg);
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
     }
 
     .bubble pre {
-      background: var(--code-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
       padding: 12px 14px;
-      margin: 12px 0;
       overflow-x: auto;
       font-family: 'JetBrains Mono', monospace;
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.55;
+      margin: 0;
+      background: transparent;
     }
 
     .bubble code {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9em;
-      background: rgba(255, 255, 255, 0.08);
+      font-size: 0.88em;
+      background: rgba(56, 189, 248, 0.1);
       color: #38bdf8;
       padding: 2px 6px;
-      border-radius: 4px;
+      border-radius: 5px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
     }
 
     .bubble pre code {
       background: transparent;
-      color: inherit;
+      border: none;
+      color: #e2e8f0;
       padding: 0;
-      border-radius: 0;
     }
 
     .bubble blockquote {
       border-left: 3px solid var(--accent);
-      padding-left: 12px;
+      background: rgba(0, 150, 136, 0.06);
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
       margin: 12px 0;
-      color: var(--text-muted);
-      font-style: italic;
+      color: #d1d5db;
     }
 
-    .bubble hr {
-      border: none;
-      border-top: 1px solid var(--card-border);
+    /* Polished Tables */
+    .table-wrapper {
+      overflow-x: auto;
       margin: 16px 0;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
     }
 
-    /* Rich Markdown Tables */
     .bubble table {
       width: 100%;
       border-collapse: collapse;
-      margin: 14px 0;
       font-size: 13px;
-      display: block;
-      overflow-x: auto;
+      background: var(--card-bg);
     }
 
     .bubble th, .bubble td {
       border: 1px solid var(--card-border);
-      padding: 8px 12px;
+      padding: 10px 14px;
       text-align: left;
     }
 
     .bubble th {
-      background: #1e2638;
+      background: #182030;
       color: #ffffff;
       font-weight: 600;
+      letter-spacing: 0.02em;
     }
 
     .bubble tr:nth-child(even) td {
@@ -300,12 +338,23 @@
     }
 
     .bubble tr:hover td {
-      background: rgba(0, 150, 136, 0.05);
+      background: rgba(0, 150, 136, 0.07);
     }
 
-    .bubble a {
-      color: #38bdf8;
-      text-decoration: underline;
+    /* Blinking Streaming Caret */
+    .streaming-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 15px;
+      background: var(--accent);
+      margin-left: 3px;
+      vertical-align: text-bottom;
+      animation: blink 0.8s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
     }
 
     .meta {
@@ -320,7 +369,7 @@
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
-      margin: 12px 0 6px;
+      margin: 10px 0 6px;
     }
 
     .chip {
@@ -397,7 +446,6 @@
       font-size: 11px;
       color: var(--text-muted);
     }
-    footer a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
@@ -406,13 +454,13 @@
       <div class="logo-badge">FastAPI</div>
       <div class="title-group">
         <h1>Cloud LLM Assistant</h1>
-        <p>Served via native app.frontend() · Production Ready</p>
+        <p>Real-Time Streaming SSE · Native app.frontend() · Production Ready</p>
       </div>
     </div>
     <div class="header-controls">
       <div class="status-pill">
         <div class="status-dot"></div>
-        <span id="health-status">Online (Free Tier)</span>
+        <span id="health-status">Online (Stream Active)</span>
       </div>
       <div class="auth-input-group">
         <label>Key</label>
@@ -425,17 +473,17 @@
     <div class="chat-box" id="chat">
       <div class="message bot">
         <div class="bubble">
-          👋 Welcome! I am your <strong>FastAPI Cloud LLM Assistant</strong>, running directly on FastAPI Cloud's auto-scaling infrastructure.<br><br>
-          Type any question below, or select a quick starter prompt.
+          👋 Welcome! I am your <strong>FastAPI Cloud LLM Assistant</strong>, streaming progressive completions token-by-token using <strong>Server-Sent Events (SSE)</strong>.<br><br>
+          Select a quick prompt or type your query below to see live streaming with full Markdown formatting and tables.
         </div>
         <div class="meta">FastAPI Engine · Ready</div>
       </div>
     </div>
 
     <div class="quick-chips">
-      <div class="chip" onclick="usePrompt('Compare FastAPI, Flask, and Django in a detailed Markdown comparison table')">📊 Compare Frameworks (Table)</div>
-      <div class="chip" onclick="usePrompt('Show me a complete Python snippet for async streaming with Server-Sent Events')">⚡ Async SSE Snippet</div>
-      <div class="chip" onclick="usePrompt('What makes FastAPI Cloud ideal for production LLM applications?')">☁️ Why FastAPI Cloud?</div>
+      <div class="chip" onclick="usePrompt('Compare FastAPI, Flask, and Django in a detailed Markdown comparison table with pros, cons, and performance scores')">📊 Compare Frameworks (Table)</div>
+      <div class="chip" onclick="usePrompt('Write a clean async Python code snippet demonstrating Server-Sent Events in FastAPI')">⚡ Streaming SSE Snippet</div>
+      <div class="chip" onclick="usePrompt('What are the key architectural advantages of FastAPI Cloud for AI applications?')">☁️ Why FastAPI Cloud?</div>
     </div>
 
     <div class="input-bar">
@@ -453,7 +501,7 @@
     const sendBtn = document.getElementById('send-btn');
     const apiKeyInput = document.getElementById('api-key');
 
-    // Configure marked to support GFM tables and line breaks
+    // Configure marked for tables & line breaks
     if (window.marked) {
       marked.setOptions({
         gfm: true,
@@ -464,16 +512,53 @@
     function renderMarkdown(text) {
       if (window.marked && window.DOMPurify) {
         try {
-          const rawHtml = marked.parse(text);
+          let rawHtml = marked.parse(text);
+          // Enhance tables with wrapper for horizontal scrolling
+          rawHtml = rawHtml.replace(/<table>/g, '<div class="table-wrapper"><table>').replace(/<\/table>/g, '</table></div>');
           return DOMPurify.sanitize(rawHtml);
         } catch (e) {
-          console.error("Markdown rendering error:", e);
+          console.error("Markdown render error:", e);
         }
       }
       return escapeHtml(text).replace(/\n/g, '<br>');
     }
 
-    // Auto resize textarea
+    function enhanceCodeBlocks(container) {
+      container.querySelectorAll('pre').forEach((pre) => {
+        if (pre.parentElement.classList.contains('code-container')) return;
+
+        const codeEl = pre.querySelector('code');
+        const codeText = codeEl ? codeEl.innerText : pre.innerText;
+        const langMatch = codeEl ? codeEl.className.match(/language-(\w+)/) : null;
+        const lang = langMatch ? langMatch[1].toUpperCase() : 'CODE';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-container';
+
+        const header = document.createElement('div');
+        header.className = 'code-header';
+        header.innerHTML = `<span>${lang}</span><button class="copy-btn" onclick="copyCode(this)">Copy</button>`;
+
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(header);
+        wrapper.appendChild(pre);
+      });
+    }
+
+    function copyCode(btn) {
+      const codeContainer = btn.closest('.code-container');
+      const code = codeContainer.querySelector('pre code') || codeContainer.querySelector('pre');
+      navigator.clipboard.writeText(code.innerText).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        btn.style.color = '#10b981';
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.color = '';
+        }, 2000);
+      });
+    }
+
     input.addEventListener('input', function() {
       this.style.height = 'auto';
       this.style.height = (this.scrollHeight) + 'px';
@@ -497,17 +582,24 @@
 
       const apiKey = apiKeyInput.value.trim() || 'demo-key-123';
 
-      // Append user bubble (plain text)
+      // 1. Append User Message
       appendMessage('user', prompt, 'You');
       input.value = '';
       input.style.height = 'auto';
       sendBtn.disabled = true;
+      sendBtn.innerText = 'Streaming...';
 
-      // Append placeholder bot bubble
-      const botMessageId = appendMessage('bot', 'Thinking...', 'FastAPI Cloud');
+      // 2. Append Placeholder Bot Message
+      const botMessageId = appendMessage('bot', '', 'Connecting...');
+      const botEl = document.getElementById(botMessageId);
+      const bubbleEl = botEl.querySelector('.bubble');
+      const metaEl = botEl.querySelector('.meta');
+
+      let accumulatedText = '';
+      let activeModel = 'FastAPI Engine';
 
       try {
-        const response = await fetch('/api/generate', {
+        const response = await fetch('/api/generate/stream', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -521,12 +613,50 @@
           throw new Error(errData.detail || `HTTP Error ${response.status}`);
         }
 
-        const data = await response.json();
-        updateMessage(botMessageId, data.response, `${data.model || 'LLM Engine'}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Keep incomplete line
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              try {
+                const payload = JSON.parse(trimmed.slice(6));
+                if (payload.chunk) {
+                  accumulatedText += payload.chunk;
+                  bubbleEl.innerHTML = renderMarkdown(accumulatedText) + '<span class="streaming-cursor"></span>';
+                  chat.scrollTop = chat.scrollHeight;
+                }
+                if (payload.model) {
+                  activeModel = payload.model;
+                }
+              } catch (e) {
+                // Ignore partial JSON
+              }
+            }
+          }
+        }
+
+        // Final render after stream completes
+        bubbleEl.innerHTML = renderMarkdown(accumulatedText);
+        enhanceCodeBlocks(bubbleEl);
+        metaEl.textContent = `${activeModel} · ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        chat.scrollTop = chat.scrollHeight;
+
       } catch (err) {
-        updateMessage(botMessageId, `⚠️ Error: ${err.message}`, 'Auth / Network Alert');
+        bubbleEl.innerHTML = `<span style="color: var(--error);">⚠️ Error: ${escapeHtml(err.message)}</span>`;
+        metaEl.textContent = 'Auth / Stream Alert';
       } finally {
         sendBtn.disabled = false;
+        sendBtn.innerText = 'Send';
         input.focus();
       }
     }
@@ -536,23 +666,14 @@
       const div = document.createElement('div');
       div.className = `message ${sender}`;
       div.id = id;
-      const content = sender === 'bot' && text !== 'Thinking...' ? renderMarkdown(text) : escapeHtml(text).replace(/\n/g, '<br>');
+      const initialContent = text ? renderMarkdown(text) : '<span class="streaming-cursor"></span>';
       div.innerHTML = `
-        <div class="bubble">${content}</div>
+        <div class="bubble">${initialContent}</div>
         <div class="meta">${meta} · ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
       `;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
       return id;
-    }
-
-    function updateMessage(id, text, meta) {
-      const el = document.getElementById(id);
-      if (el) {
-        el.querySelector('.bubble').innerHTML = renderMarkdown(text);
-        if (meta) el.querySelector('.meta').textContent = `${meta} · ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-        chat.scrollTop = chat.scrollHeight;
-      }
     }
 
     function escapeHtml(str) {
