@@ -1,38 +1,24 @@
-name: CI & Deploy to FastAPI Cloud
+name: Deploy to FastAPI Cloud
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
-  test:
-    name: Lint & Test
+  deploy:
+    name: Test & Deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v10
         with:
           version: "latest"
           enable-cache: true
-      - name: Run Ruff Lint
+      - name: Lint with Ruff
         run: uv run ruff check .
       - name: Run Pytest
         run: uv run pytest
-
-  deploy:
-    name: Deploy to FastAPI Cloud
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: "latest"
-          enable-cache: true
-      - name: Deploy
+      - name: Deploy to FastAPI Cloud
         run: uv run fastapi deploy
         env:
           FASTAPI_CLOUD_TOKEN: ${{ secrets.FASTAPI_CLOUD_TOKEN }}
