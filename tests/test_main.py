@@ -52,3 +52,33 @@ def test_frontend_colocation():
     response = client.get("/")
     assert response.status_code == 200
     assert "FastAPI Cloud LLM Assistant" in response.text
+
+
+def test_get_models():
+    response = client.get("/api/models")
+    assert response.status_code == 200
+    data = response.json()
+    assert "models" in data
+    assert "default_model" in data
+    assert len(data["models"]) >= 1
+    # Check that 'auto' model is always present
+    model_ids = [m["id"] for m in data["models"]]
+    assert "auto" in model_ids
+
+
+def test_test_model_unauthorized():
+    response = client.post("/api/models/test", json={"model": "simulation-engine"})
+    assert response.status_code == 401
+
+
+def test_test_model_authorized_simulation():
+    response = client.post(
+        "/api/models/test",
+        headers={"X-API-Key": "demo-key-123"},
+        json={"model": "simulation-engine"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert data["model"] == "simulation-engine"
+    assert "latency_ms" in data

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import time
 from collections.abc import AsyncIterable
 from typing import Annotated
 
@@ -33,10 +34,37 @@ class HealthResponse(BaseModel):
     environment: str
 
 
+class ModelItem(BaseModel):
+    id: str
+    name: str
+    provider: str
+    available: bool
+
+
+class ModelsListResponse(BaseModel):
+    models: list[ModelItem]
+    default_model: str
+
+
+class ModelTestRequest(BaseModel):
+    model: str = Field(description="Model ID to test")
+
+
+class ModelTestResponse(BaseModel):
+    status: str
+    model: str
+    provider: str
+    latency_ms: int
+    message: str
+
+
 class GenerateRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=10000, description="User prompt")
     system_prompt: str | None = Field(
         default=None, max_length=2000, description="Optional system guidance"
+    )
+    model: str | None = Field(
+        default=None, description="Optional target model identifier"
     )
 
 
@@ -71,14 +99,22 @@ async def verify_auth(
 
 # 4. Asynchronous Streaming LLM Engine
 async def stream_llm(
-    prompt: str, system_prompt: str | None = None
+    prompt: str,
+    system_prompt: str | None = None,
+    requested_model: str | None = None,
 ) -> AsyncIterable[dict]:
     groq_key = os.getenv("GROQ_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY")
     nvidia_key = os.getenv("NVIDIA_API_KEY")
 
-    # Priority A: Groq API (High rate limits, ultra-fast streaming)
-    if groq_key:
+    target = requested_model or "auto"
+
+    # Strategy 1: Targeted Groq Model or Auto (when Groq key exists)
+    is_groq_target = target == "auto" or target.startswith(
+        ("qwen/", "openai/", "meta-llama/", "allam-")
+    )
+    if groq_key and is_groq_target:
+        groq_model = "qwen/qwen3.8-27b" if target == "auto" else target
         try:
             url = "https://api.groq.com/openai/v1/chat/completions"
             messages = []
@@ -93,7 +129,7 @@ async def stream_llm(
                     url,
                     headers={"Authorization": f"Bearer {groq_key}"},
                     json={
-                        "model": "qwen/qwen3.8-27b",
+                        "model": groq_model,
                         "messages": messages,
                         "stream": True,
                     },
@@ -107,17 +143,20 @@ async def stream_llm(
                             if delta:
                                 yield {
                                     "chunk": delta,
-                                    "model": "qwen/qwen3.8-27b",
+                                    "model": groq_model,
                                     "provider": "groq",
                                 }
                     return
         except (httpx.HTTPError, json.JSONDecodeError, KeyError):
-            pass  # Fall through to secondary provider if Groq encounters an issue
+            if requested_model and requested_model != "auto":
+                raise  # Re-raise if explicit model was requested and failed
 
-    # Priority B: Google Gemini API (StreamGenerateContent)
-    if gemini_key:
+    # Strategy 2: Targeted Gemini Model or Auto Fallback
+    is_gemini_target = target == "auto" or target.startswith("gemini")
+    if gemini_key and is_gemini_target:
+        gemini_model = "gemini-2.5-flash" if target == "auto" else target
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key={gemini_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:streamGenerateContent?alt=sse&key={gemini_key}"
             payload = {"contents": [{"parts": [{"text": prompt}]}]}
             if system_prompt:
                 payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
@@ -136,15 +175,17 @@ async def stream_llm(
                                 if parts and "text" in parts[0]:
                                     yield {
                                         "chunk": parts[0]["text"],
-                                        "model": "gemini-2.5-flash",
+                                        "model": gemini_model,
                                         "provider": "google-gemini",
                                     }
                     return
         except (httpx.HTTPError, json.JSONDecodeError, KeyError):
-            pass
+            if requested_model and requested_model != "auto":
+                raise
 
-    # Priority C: NVIDIA NIM API
-    if nvidia_key:
+    # Strategy 3: Targeted NVIDIA Model
+    is_nvidia_target = target.startswith(("meta/", "nvidia/"))
+    if nvidia_key and is_nvidia_target:
         try:
             url = "https://integrate.api.nvidia.com/v1/chat/completions"
             messages = []
@@ -159,7 +200,7 @@ async def stream_llm(
                     url,
                     headers={"Authorization": f"Bearer {nvidia_key}"},
                     json={
-                        "model": "meta/llama-3.1-8b-instruct",
+                        "model": target,
                         "messages": messages,
                         "stream": True,
                     },
@@ -173,32 +214,38 @@ async def stream_llm(
                             if delta:
                                 yield {
                                     "chunk": delta,
-                                    "model": "meta/llama-3.1-8b-instruct",
+                                    "model": target,
                                     "provider": "nvidia-nim",
                                 }
                     return
         except (httpx.HTTPError, json.JSONDecodeError, KeyError):
             pass
 
-    # Development Fallback Stream
+    # Strategy 4: Development Fallback Stream
     words = [
-        "FastAPI ", "Cloud ", "simulated ", "streaming ", "response ", "for: ", f"'{prompt}'.\n\n",
-        "Both ", "SSE ", "streaming ", "and ", "Markdown ", "tables ", "are ", "fully ", "functional!\n\n",
-        "To ", "switch ", "to ", "real ", "inference, ", "ensure ", "your ", "API ", "keys ", "are ", "configured."
+        "FastAPI ", "Cloud ", "streaming ", "simulation ", "for: ", f"'{prompt}'.\n\n",
+        f"Active target model: **{target}**.\n\n",
+        "Both ", "SSE ", "streaming ", "and ", "Model ", "Selection ", "are ", "operational!"
     ]
     for w in words:
-        await asyncio.sleep(0.04)
-        yield {"chunk": w, "model": "simulation-engine", "provider": "fastapi-cloud-mock"}
+        await asyncio.sleep(0.03)
+        yield {
+            "chunk": w,
+            "model": "simulation-engine",
+            "provider": "fastapi-cloud-mock",
+        }
 
 
 # 5. Non-streaming fallback query
 async def query_llm(
-    prompt: str, system_prompt: str | None = None
+    prompt: str,
+    system_prompt: str | None = None,
+    requested_model: str | None = None,
 ) -> tuple[str, str, str]:
     accumulated = []
-    final_model = "simulation-engine"
+    final_model = requested_model or "simulation-engine"
     final_provider = "fastapi-cloud-mock"
-    async for item in stream_llm(prompt, system_prompt):
+    async for item in stream_llm(prompt, system_prompt, requested_model):
         accumulated.append(item["chunk"])
         final_model = item.get("model", final_model)
         final_provider = item.get("provider", final_provider)
@@ -216,6 +263,209 @@ async def health_check() -> HealthResponse:
     )
 
 
+@app.get("/api/models", response_model=ModelsListResponse, tags=["Models"])
+async def get_models() -> ModelsListResponse:
+    """Returns the list of available models based on active API keys."""
+    groq_key = bool(os.getenv("GROQ_API_KEY"))
+    gemini_key = bool(os.getenv("GEMINI_API_KEY"))
+    nvidia_key = bool(os.getenv("NVIDIA_API_KEY"))
+
+    models: list[ModelItem] = [
+        ModelItem(
+            id="auto",
+            name="⚡ Auto (Best Available Provider)",
+            provider="auto",
+            available=True,
+        )
+    ]
+
+    if groq_key:
+        models.extend(
+            [
+                ModelItem(
+                    id="qwen/qwen3.8-27b",
+                    name="Qwen 3.8 27B (Groq - Fast)",
+                    provider="groq",
+                    available=True,
+                ),
+                ModelItem(
+                    id="openai/gpt-oss-20b",
+                    name="GPT-OSS 20B (Groq)",
+                    provider="groq",
+                    available=True,
+                ),
+                ModelItem(
+                    id="openai/gpt-oss-120b",
+                    name="GPT-OSS 120B (Groq)",
+                    provider="groq",
+                    available=True,
+                ),
+                ModelItem(
+                    id="allam-2-7b",
+                    name="Allam 7B (Groq)",
+                    provider="groq",
+                    available=True,
+                ),
+            ]
+        )
+
+    if gemini_key:
+        models.extend(
+            [
+                ModelItem(
+                    id="gemini-2.5-flash",
+                    name="Gemini 2.5 Flash (Google)",
+                    provider="google-gemini",
+                    available=True,
+                ),
+                ModelItem(
+                    id="gemini-1.5-flash",
+                    name="Gemini 1.5 Flash (Google)",
+                    provider="google-gemini",
+                    available=True,
+                ),
+            ]
+        )
+
+    if nvidia_key:
+        models.append(
+            ModelItem(
+                id="meta/llama-3.1-8b-instruct",
+                name="Llama 3.1 8B (NVIDIA)",
+                provider="nvidia-nim",
+                available=True,
+            )
+        )
+
+    models.append(
+        ModelItem(
+            id="simulation-engine",
+            name="Simulation Engine (Offline Mock)",
+            provider="fastapi-cloud-mock",
+            available=True,
+        )
+    )
+
+    default = (
+        "qwen/qwen3.8-27b"
+        if groq_key
+        else ("gemini-2.5-flash" if gemini_key else "auto")
+    )
+    return ModelsListResponse(models=models, default_model=default)
+
+
+@app.post("/api/models/test", response_model=ModelTestResponse, tags=["Models"])
+async def test_model(
+    request: ModelTestRequest,
+    _: Annotated[str, Depends(verify_auth)],
+) -> ModelTestResponse:
+    """Tests latency and connectivity for a specific model."""
+    start_time = time.perf_counter()
+    groq_key = os.getenv("GROQ_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY")
+
+    target = request.model
+
+    try:
+        if target.startswith("gemini"):
+            if not gemini_key:
+                return ModelTestResponse(
+                    status="offline",
+                    model=target,
+                    provider="google-gemini",
+                    latency_ms=0,
+                    message="GEMINI_API_KEY is not configured",
+                )
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{target}:generateContent?key={gemini_key}"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(
+                    url,
+                    json={"contents": [{"parts": [{"text": "Reply 'OK' in 1 word"}]}]},
+                )
+                latency = int((time.perf_counter() - start_time) * 1000)
+                if resp.status_code == 200:
+                    return ModelTestResponse(
+                        status="healthy",
+                        model=target,
+                        provider="google-gemini",
+                        latency_ms=latency,
+                        message="Connected and responding normally",
+                    )
+                if resp.status_code == 429:
+                    return ModelTestResponse(
+                        status="rate_limited",
+                        model=target,
+                        provider="google-gemini",
+                        latency_ms=latency,
+                        message="Quota exhausted (429 Rate Limited). Recommend switching to Groq.",
+                    )
+                return ModelTestResponse(
+                    status="error",
+                    model=target,
+                    provider="google-gemini",
+                    latency_ms=latency,
+                    message=f"HTTP {resp.status_code}: {resp.text[:100]}",
+                )
+
+        if target == "auto" or target.startswith(
+            ("qwen/", "openai/", "meta-llama/", "allam-")
+        ):
+            if not groq_key and target != "auto":
+                return ModelTestResponse(
+                    status="offline",
+                    model=target,
+                    provider="groq",
+                    latency_ms=0,
+                    message="GROQ_API_KEY is not configured",
+                )
+            test_m = "qwen/qwen3.8-27b" if target == "auto" else target
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {groq_key}"},
+                    json={
+                        "model": test_m,
+                        "messages": [{"role": "user", "content": "Ping"}],
+                        "max_tokens": 5,
+                    },
+                )
+                latency = int((time.perf_counter() - start_time) * 1000)
+                if resp.status_code == 200:
+                    return ModelTestResponse(
+                        status="healthy",
+                        model=test_m,
+                        provider="groq",
+                        latency_ms=latency,
+                        message="Ultra-fast connection operational",
+                    )
+                return ModelTestResponse(
+                    status="error",
+                    model=test_m,
+                    provider="groq",
+                    latency_ms=latency,
+                    message=f"HTTP {resp.status_code}: {resp.text[:100]}",
+                )
+
+        latency = int((time.perf_counter() - start_time) * 1000)
+        return ModelTestResponse(
+            status="healthy",
+            model=target,
+            provider="simulation",
+            latency_ms=latency,
+            message="Simulation engine online",
+        )
+    except Exception as e:  # noqa: BLE001 - Safely capture unexpected network or parsing errors for test feedback
+        latency = int((time.perf_counter() - start_time) * 1000)
+        return ModelTestResponse(
+            status="error",
+            model=target,
+            provider="unknown",
+            latency_ms=latency,
+            message=f"Connection failure: {e!s}",
+        )
+
+
 @app.post("/api/generate", response_model=GenerateResponse, tags=["LLM"])
 async def generate(
     request: GenerateRequest,
@@ -223,7 +473,9 @@ async def generate(
 ) -> GenerateResponse:
     """Non-streaming authenticated endpoint returning complete LLM completion."""
     reply_text, model_name, provider_name = await query_llm(
-        prompt=request.prompt, system_prompt=request.system_prompt
+        prompt=request.prompt,
+        system_prompt=request.system_prompt,
+        requested_model=request.model,
     )
     return GenerateResponse(
         response=reply_text,
@@ -239,7 +491,9 @@ async def generate_stream(
 ) -> AsyncIterable[ServerSentEvent]:
     """Server-Sent Events (SSE) streaming endpoint for real-time progressive output."""
     async for item in stream_llm(
-        prompt=request.prompt, system_prompt=request.system_prompt
+        prompt=request.prompt,
+        system_prompt=request.system_prompt,
+        requested_model=request.model,
     ):
         yield ServerSentEvent(data=item)
     yield ServerSentEvent(data={"done": True})
