@@ -7,18 +7,17 @@ on:
 
 jobs:
   deploy:
-    name: Test & Deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
         with:
-          enable-cache: true
-      - name: Lint with Ruff
-        run: uv run ruff check .
-      - name: Run Pytest
-        run: uv run pytest
-      - name: Deploy to FastAPI Cloud
+          version: "latest-known"
+      - name: Lint & Test
+        run: |
+          uv run ruff check .
+          uv run pytest
+      - name: Deploy
         run: uv run fastapi deploy
         env:
           FASTAPI_CLOUD_TOKEN: ${{ secrets.FASTAPI_CLOUD_TOKEN }}
