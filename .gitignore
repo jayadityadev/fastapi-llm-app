@@ -1,0 +1,31 @@
+# Python & Virtual Environments
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# Testing & Linting
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Knowledge Graph (rebuilt locally or on demand)
+graphify-out/
+!graphify-out/GRAPH_REPORT.md
+
+# Agent & IDE local state (session transcripts, caches)
+.gemini/
+.cursor/
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastAPI LLM App · FastAPI Cloud</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --card-bg: #12161f;
+      --card-border: #1e2638;
+      --accent: #009688;
+      --accent-hover: #00796b;
+      --text-main: #f0f4fc;
+      --text-muted: #8b9bb4;
+      --bubble-user: #1a2234;
+      --bubble-bot: #151b27;
+      --code-bg: #0d1117;
+      --success: #10b981;
+      --error: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background: rgba(18, 22, 31, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #009688, #059669);
+      color: white;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 150, 136, 0.25);
+    }
+
+    .title-group h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .title-group p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      background: #0f1c18;
+      border: 1px solid #134e3f;
+      color: #34d399;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .auth-input-group {
+      display: flex;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 4px 10px;
+      gap: 6px;
+    }
+
+    .auth-input-group label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .auth-input-group input {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      outline: none;
+      width: 130px;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 20px 10px;
+      overflow: hidden;
+    }
+
+    .chat-box {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-right: 6px;
+    }
+
+    .chat-box::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-box::-webkit-scrollbar-thumb {
+      background: var(--card-border);
+      border-radius: 4px;
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 82%;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+    }
+
+    .message.bot {
+      align-self: flex-start;
+    }
+
+    .bubble {
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .message.user .bubble {
+      background: var(--bubble-user);
+      border: 1px solid #2b3852;
+      color: #e2e8f0;
+      border-bottom-right-radius: 3px;
+    }
+
+    .message.bot .bubble {
+      background: var(--bubble-bot);
+      border: 1px solid var(--card-border);
+      color: #f1f5f9;
+      border-bottom-left-radius: 3px;
+    }
+
+    .meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      padding: 0 4px;
+    }
+    .message.user .meta { text-align: right; }
+
+    .quick-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 0 6px;
+    }
+
+    .chip {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--text-main);
+      transform: translateY(-1px);
+    }
+
+    .input-bar {
+      margin-top: 10px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .input-bar textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 14px;
+      resize: none;
+      max-height: 100px;
+      min-height: 24px;
+      line-height: 24px;
+    }
+
+    .send-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .send-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .send-btn:disabled {
+      background: #232c3d;
+      color: #64748b;
+      cursor: not-allowed;
+    }
+
+    footer {
+      text-align: center;
+      padding: 8px 0;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo-badge">FastAPI</div>
+      <div class="title-group">
+        <h1>Cloud LLM Assistant</h1>
+        <p>Served via native app.frontend() · Production Ready</p>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        <span id="health-status">Online (Free Tier)</span>
+      </div>
+      <div class="auth-input-group">
+        <label>Key</label>
+        <input type="text" id="api-key" value="demo-key-123" placeholder="X-API-Key" title="API Authentication Key">
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="chat-box" id="chat">
+      <div class="message bot">
+        <div class="bubble">
+          👋 Welcome! I am your <strong>FastAPI Cloud LLM Assistant</strong>, running directly on FastAPI Cloud's auto-scaling infrastructure.<br><br>
+          Type any question below, or select a quick starter prompt.
+        </div>
+        <div class="meta">FastAPI Engine · Ready</div>
+      </div>
+    </div>
+
+    <div class="quick-chips">
+      <div class="chip" onclick="usePrompt('What makes FastAPI Cloud ideal for LLM apps?')">⚡ Why FastAPI Cloud?</div>
+      <div class="chip" onclick="usePrompt('Show me an example of async streaming in FastAPI with Server-Sent Events')">🌊 Streaming SSE Example</div>
+      <div class="chip" onclick="usePrompt('How does FastAPI Cloud handle horizontal replica auto-scaling?')">📈 Auto-scaling Architecture</div>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="prompt-input" rows="1" placeholder="Ask anything... (Press Enter to send)"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+    <footer>
+      Powered by FastAPI 0.162+ & FastAPI Cloud · Zero-Cost Hobby Tier Architecture
+    </footer>
+  </main>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('prompt-input');
+    const sendBtn = document.getElementById('send-btn');
+    const apiKeyInput = document.getElementById('api-key');
+
+    // Auto resize textarea
+    input.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function usePrompt(text) {
+      input.value = text;
+      input.focus();
+    }
+
+    async function sendMessage() {
+      const prompt = input.value.trim();
+      if (!prompt) return;
+
+      const apiKey = apiKeyInput.value.trim() || 'demo-key-123';
+
+      // Append user bubble
+      appendMessage('user', prompt, 'You');
+      input.value = '';
+      input.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      // Append placeholder bot bubble
+      const botMessageId = appendMessage('bot', 'Thinking...', 'FastAPI Cloud');
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey,
+          },
+          body: JSON.stringify({ prompt: prompt })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.detail || `HTTP Error ${response.status}`);
+        }
+
+        const data = await response.json();
+        updateMessage(botMessageId, data.response, `${data.model || 'LLM Engine'}`);
+      } catch (err) {
+        updateMessage(botMessageId, `⚠️ Error: ${err.message}`, 'Auth / Network Alert');
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    function appendMessage(sender, text, meta) {
+      const id = 'msg-' + Math.random().toString(36).substr(2, 9);
+      const div = document.createElement('div');
+      div.className = `message ${sender}`;
+      div.id = id;
+      div.innerHTML = `
+        <div class="bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+        <div class="meta">${meta} · ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+      `;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      return id;
+    }
+
+    function updateMessage(id, text, meta) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.querySelector('.bubble').innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+        if (meta) el.querySelector('.meta').textContent = `${meta} · ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
